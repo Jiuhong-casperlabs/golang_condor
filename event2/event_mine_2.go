@@ -1,8 +1,8 @@
 package main
 
 import (
-	"casper/contract/helper"
 	"fmt"
+	"golang_condor/helper"
 	"os"
 	"regexp"
 

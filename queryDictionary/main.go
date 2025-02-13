@@ -1,11 +1,11 @@
 package main
 
 import (
-	"casper/contract/utils"
 	"context"
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
+	"golang_condor/utils"
 	"net/http"
 
 	"github.com/make-software/casper-go-sdk/v2/casper"

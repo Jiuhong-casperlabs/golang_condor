@@ -1,27 +1,26 @@
+// ok
 package main
 
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
 
-	"casper/contract/utils"
-
-	"github.com/make-software/casper-go-sdk/v2/rpc"
+	"github.com/make-software/casper-go-sdk/v2/casper"
 )
 
 func main() {
-	TransactionHash := "7a212286fd55573fd404de7ef2a663b982cd31124c4fbfdc4bbd3d205b86f7f4"
-	rpcClient := rpc.NewClient(rpc.NewHttpHandler(utils.ENDPOINT, http.DefaultClient))
-	transaction, err := rpcClient.GetTransactionByTransactionHash(context.Background(), TransactionHash)
+	handler := casper.NewRPCHandler("http://node.integration.casper.network:7777/rpc", http.DefaultClient)
+	client := casper.NewRPCClient(handler)
+	transactionHash := "f9fa4d7c26d77758ea0ef70184ae9210c1c915721bb541d7e9dc4e2d09c9954b"
+	deploy, err := client.GetTransactionByTransactionHash(context.Background(), transactionHash)
 	if err != nil {
-		panic(err)
+		return
 	}
-
-	jsonResult, err := json.Marshal(transaction)
+	b, err := json.MarshalIndent(deploy, "", "  ")
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
-	log.Println("Transaction info:", string(jsonResult))
+	fmt.Print(string(b))
 }

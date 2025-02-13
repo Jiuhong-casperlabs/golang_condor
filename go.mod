@@ -1,11 +1,10 @@
-module casper/contract
+module golang_condor
 
-go 1.19
+go 1.23.6
 
 require (
-	github.com/make-software/casper-go-sdk/v2 v2.0.2-beta1.0.20241011150607-a317a9905ccd
-	// github.com/make-software/casper-go-sdk/v2 v2.0.2-beta1
-	github.com/make-software/ces-go-parser/v2 v2.0.0-beta.0.20240920092652-0c931e0ad911
+	github.com/make-software/casper-go-sdk/v2 v2.0.3-beta1.0.20250212145225-ce40447dcfbe
+	github.com/make-software/ces-go-parser/v2 v2.0.0-beta
 	gopkg.in/yaml.v3 v3.0.1
 )
 

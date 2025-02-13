@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
+	"fmt"
 	"log"
 	"math/big"
 	"net/http"
+	"os"
 	"time"
 
-	"casper/contract/utils"
+	"golang_condor/utils"
 
 	"github.com/make-software/casper-go-sdk/v2/casper"
 	"github.com/make-software/casper-go-sdk/v2/rpc"
@@ -19,26 +20,15 @@ import (
 func main() {
 	keys, err := casper.NewED25519PrivateKeyFromPEMFile(utils.KEYPATH)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 	pubKey := keys.PublicKey()
 
-	header := types.TransactionV1Header{
-		ChainName: utils.NETWORKNAME,
-		Timestamp: types.Timestamp(time.Now().UTC()),
-		TTL:       utils.TTL,
-		InitiatorAddr: types.InitiatorAddr{
-			PublicKey: &pubKey,
-		},
-		PricingMode: types.PricingMode{
-			Fixed: &types.FixedMode{
-				GasPriceTolerance: 3,
-			},
-		},
+	contractPath := "/home/ubuntu/mywork/mycontract_condor/contract/target/wasm32-unknown-unknown/release/contract.wasm"
+	moduleBytes, err := os.ReadFile(contractPath)
+	if err != nil {
+		fmt.Println(err)
 	}
-
-	contractPath := "/home/ubuntu/caspereco/cep18/v2/cep18.wasm"
-	moduleBytes := utils.GetmoduleBytes(contractPath)
 
 	args := &types.Args{}
 	args.AddArgument("name", *clvalue.NewCLString("Test")).
@@ -48,36 +38,54 @@ func main() {
 		AddArgument("events_mode", *clvalue.NewCLUint8(2)).
 		AddArgument("enable_mint_burn", *clvalue.NewCLUint8(1))
 
-	body := types.TransactionV1Body{
-		Args: args,
-		Target: types.TransactionTarget{
-			Session: &types.SessionTarget{
-				ModuleBytes: hex.EncodeToString(moduleBytes),
-				Runtime:     types.TransactionRuntimeVmCasperV1,
+	payload, err := types.NewTransactionV1Payload(
+		types.InitiatorAddr{
+			PublicKey: &pubKey,
+		},
+		types.Timestamp(time.Now().UTC()),
+		1800000000000,
+		utils.NETWORKNAME,
+		types.PricingMode{
+			Limited: &types.LimitedMode{
+				PaymentAmount:     10000000000,
+				GasPriceTolerance: 1,
+				StandardPayment:   true,
 			},
 		},
-		TransactionEntryPoint: types.TransactionEntryPoint{
+		types.NewNamedArgs(args),
+		types.TransactionTarget{
+			Session: &types.SessionTarget{
+				ModuleBytes:      moduleBytes,
+				Runtime:          types.NewVmCasperV1TransactionRuntime(),
+				IsInstallUpgrade: true,
+			},
+		},
+		types.TransactionEntryPoint{
 			Call: &struct{}{},
 		},
-		TransactionScheduling: types.TransactionScheduling{
+		types.TransactionScheduling{
 			Standard: &struct{}{},
 		},
-		TransactionCategory: 2,
+	)
+
+	if err != nil {
+		fmt.Println(err)
 	}
 
-	transaction, err := types.MakeTransactionV1(header, body)
+	transaction, err := types.MakeTransactionV1(payload)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
+
 	err = transaction.Sign(keys)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 
 	rpcClient := rpc.NewClient(rpc.NewHttpHandler(utils.ENDPOINT, http.DefaultClient))
 	res, err := rpcClient.PutTransactionV1(context.Background(), *transaction)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 
 	log.Println("TransactionV1 submitted:", res.TransactionHash.TransactionV1)

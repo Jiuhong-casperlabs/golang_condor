@@ -1,26 +1,26 @@
+// ok
 package main
 
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
 
-	"casper/contract/utils"
-
-	"github.com/make-software/casper-go-sdk/v2/rpc"
+	"github.com/make-software/casper-go-sdk/v2/casper"
 )
 
 func main() {
-	deployHash := "e2e370e502b759c21d68313c0f101a75a06d6780a896f5b1eb1d6152bdbfd733"
-	rpcClient := rpc.NewClient(rpc.NewHttpHandler(utils.ENDPOINT, http.DefaultClient))
-	deploy, err := rpcClient.GetDeploy(context.Background(), deployHash)
+	handler := casper.NewRPCHandler("http://node.integration.casper.network:7777/rpc", http.DefaultClient)
+	client := casper.NewRPCClient(handler)
+	deployHash := "fe0d150c43b8093492043c24d700122443c1b4745d534a5df25304501b96b7b2"
+	deploy, err := client.GetDeploy(context.Background(), deployHash)
 	if err != nil {
-		panic(err)
+		return
 	}
-	jsonResult, err := json.Marshal(deploy)
+	b, err := json.MarshalIndent(deploy, "", "  ")
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
-	log.Println("Deploy info:", string(jsonResult))
+	fmt.Print(string(b))
 }

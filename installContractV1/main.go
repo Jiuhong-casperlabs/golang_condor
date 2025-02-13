@@ -1,17 +1,16 @@
+// ok
 package main
 
 import (
-	"casper/contract/utils"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"golang_condor/utils"
 	"math/big"
 	"net/http"
-	"time"
 
 	"github.com/make-software/casper-go-sdk/v2/casper"
-	"github.com/make-software/casper-go-sdk/v2/rpc"
-	"github.com/make-software/casper-go-sdk/v2/types"
 	"github.com/make-software/casper-go-sdk/v2/types/clvalue"
 )
 
@@ -20,44 +19,51 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	accountPublicKey, err := casper.NewPublicKey("012488699f9a31e36ecf002675cd7186b48e6a735d10ec1b308587ca719937752c")
+	if err != nil {
+		return
+	}
+	amount := big.NewInt(100000000000)
 
-	header := types.DefaultDeployHeader()
-	header.ChainName = utils.NETWORKNAME
-	header.Account = keys.PublicKey()
-
-	header.Timestamp = types.Timestamp(time.Now())
-	payment := types.StandardPayment(big.NewInt(4000000000))
-
-	contractPath := "/home/ubuntu/caspereco/cep18/v2/cep18.wasm"
+	contractPath := "/home/ubuntu/mywork/mycontract_condor/contract/target/wasm32-unknown-unknown/release/contract.wasm"
 	moduleBytes := utils.GetmoduleBytes(contractPath)
-
-	args := &casper.Args{}
-	args.AddArgument("name", *clvalue.NewCLString("Test")).
-		AddArgument("symbol", *clvalue.NewCLString("test")).
-		AddArgument("decimals", *clvalue.NewCLUint8(9)).
-		AddArgument("total_supply", *clvalue.NewCLUInt256(big.NewInt(1_000_000_000_000_000))).
-		AddArgument("events_mode", *clvalue.NewCLUint8(2)).
-		AddArgument("enable_mint_burn", *clvalue.NewCLUint8(1))
-	session := types.ExecutableDeployItem{
-		ModuleBytes: &types.ModuleBytes{
+	session := casper.ExecutableDeployItem{
+		ModuleBytes: &casper.ModuleBytes{
 			ModuleBytes: hex.EncodeToString(moduleBytes),
-			Args:        args,
+			Args: (&casper.Args{}).
+				AddArgument("target", clvalue.NewCLByteArray(accountPublicKey.AccountHash().Bytes())).
+				AddArgument("amount", *clvalue.NewCLUInt512(amount)),
 		},
 	}
 
-	deploy, err := types.MakeDeploy(header, payment, session)
+	payment := casper.StandardPayment(amount)
+
+	deployHeader := casper.DefaultHeader()
+	deployHeader.Account = keys.PublicKey()
+	deployHeader.ChainName = utils.NETWORKNAME
+
+	newDeploy, err := casper.MakeDeploy(deployHeader, payment, session)
 	if err != nil {
-		panic(err)
+		return
 	}
-	err = deploy.Sign(keys)
+
+	err = newDeploy.Sign(keys)
 	if err != nil {
 		panic(err)
 	}
 
-	rpcClient := rpc.NewClient(rpc.NewHttpHandler(utils.ENDPOINT, http.DefaultClient))
-	_, err = rpcClient.PutDeploy(context.Background(), *deploy)
+	handler := casper.NewRPCHandler(utils.ENDPOINT, http.DefaultClient)
+	client := casper.NewRPCClient(handler)
+	result, err := client.PutDeploy(context.Background(), *newDeploy)
 	if err != nil {
-		panic(err)
+		return
 	}
-	fmt.Println("deploy hash submitted:", deploy.Hash.ToHex())
+	b, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Print(string(b))
+	// log.Println(result.DeployHash)
 }
+
+// contract-package-b0641a4c7ddc401b31950c69e0677da5ebc98938d2c7eaf081e398c82dcf7a72
